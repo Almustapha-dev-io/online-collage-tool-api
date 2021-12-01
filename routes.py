@@ -78,8 +78,6 @@ def get_combined_image(id):
     data = None
     status = 200
 
-    print(status)
-
     if task_status == "SUCCESS":
         msg = "Collage has been generated"
         data = task_result.get() + ".png"
