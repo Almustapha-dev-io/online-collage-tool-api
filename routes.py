@@ -26,10 +26,13 @@ def receive_images():
     if not attached_files[0]:
         return get_response("No files attached!", status=400)
 
+    if len(files) > app.config.get("MAX_IMAGES"):
+        return get_response("Attached images must not be more than 6", status=400)
+
+
     for attached_file in attached_files:
         if not file_allowed(attached_file.filename):
             return get_response(f"{attached_file.filename} is not allowed!", status=400)
-
 
     form = request.form
     orientation = form.get("orientation", None)
