@@ -1,11 +1,12 @@
-from flask import jsonify, request, send_from_directory
 from os import path
 from uuid import uuid4
 from celery.result import AsyncResult
-from app import app
-from helpers import get_response, hex_color_valid, is_number
-from tasks import process_tasks, celery_app
+from flask import jsonify, request, send_from_directory
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from app import app
+from tasks import process_tasks, celery_app
+from helpers import get_response, hex_color_valid, is_number
 
 
 def file_allowed(filename):
