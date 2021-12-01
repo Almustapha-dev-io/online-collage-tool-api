@@ -9,4 +9,5 @@ def internal_server_error(e):
 
 @app.errorhandler(413)
 def content_too_long(e):
-    return get_response(f"Files too large! Max size {16}mb", status=413)
+    size_in_mb = app.config.get("MAX_CONTENT_LENGTH") / (1024 * 1024)
+    return get_response(f"Files too large! Max size {size_in_mb}mb", status=413)
