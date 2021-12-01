@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 flask = "*"
+celery = {extras = ["redis"], version = "*"}
+python-dotenv = "*"
 
 [dev-packages]
 
