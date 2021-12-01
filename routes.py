@@ -26,8 +26,9 @@ def receive_images():
     if not attached_files[0]:
         return get_response("No files attached!", status=400)
 
-    if len(files) > app.config.get("MAX_IMAGES"):
-        return get_response("Attached images must not be more than 6", status=400)
+    max_images = app.config.get("MAX_IMAGES")
+    if len(files) > max_images:
+        return get_response(f"Attached images must not be more than {max_images}", status=400)
 
 
     for attached_file in attached_files:
@@ -55,7 +56,7 @@ def receive_images():
         files.append(filename)
 
     task = process_tasks.delay(files, int(border), border_color, orientation)
-    return get_response("Task received and enqueued!", data=task.id, status=200)
+    return get_response("Task received and queued!", data=task.id, status=200)
     
 
 
