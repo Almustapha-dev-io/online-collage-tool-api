@@ -1,10 +1,11 @@
 from flask import jsonify, request, send_from_directory
-from werkzeug.utils import secure_filename
 from os import path
+from uuid import uuid4
 from celery.result import AsyncResult
 from app import app
 from helpers import get_response, hex_color_valid, is_number
 from tasks import process_tasks, celery_app
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 def file_allowed(filename):
@@ -27,7 +28,7 @@ def receive_images():
         return get_response("No files attached!", status=400)
 
     max_images = app.config.get("MAX_IMAGES")
-    if len(files) > max_images:
+    if len(attached_files) > max_images:
         return get_response(f"Attached images must not be more than {max_images}", status=400)
 
 
@@ -50,10 +51,17 @@ def receive_images():
         return get_response("Invalid border color", status=400)
 
     files = []
-    for img_file in attached_files:
-        filename = secure_filename(img_file.filename)
+    def save_file(img_file):
+        ext = img_file.filename.rsplit(".", 1)[1].lower()
+        filename = f"{uuid4()}.{ext}"
         img_file.save(path.join(app.config.get("TMP_IMG_DIR"), filename))
         files.append(filename)
+        return f"{filename} saved"
+
+    with ThreadPoolExecutor() as executor:
+        results = [executor.submit(save_file, img_file) for img_file in attached_files]
+        for f in as_completed(results):
+            print(f.result())
 
     task = process_tasks.delay(files, int(border), border_color, orientation)
     return get_response("Task received and queued!", data=task.id, status=200)
