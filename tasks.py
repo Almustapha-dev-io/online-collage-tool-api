@@ -32,7 +32,7 @@ def vertical_combine(files, border, border_color):
     for i, img in enumerate(files):
         top_offset = prev_img_height + ((i + 1) * border)
         combined_img.paste(img, (border, top_offset))
-        prev_img_height = img.size[1]
+        prev_img_height += img.size[1]
 
     return combined_img
 
@@ -56,7 +56,7 @@ def horizontal_combine(files, border, border_color):
     for i, img in enumerate(files):
         left_offset = prev_img_width + ((i + 1) * border)
         combined_img.paste(img, (left_offset, border))
-        prev_img_width = img.size[0]
+        prev_img_width += img.size[0]
 
     return combined_img
 
@@ -79,9 +79,7 @@ def resize_images(files, orientation):
             height_percent = height / float(img.size[1])
             width = int(float(img.size[0]) * float(height_percent))
 
-        print((filename, width, height))
-
-        img.thumbnail((width, height), Image.ANTIALIAS)
+        img = img.resize((width, height), Image.ANTIALIAS)
         filename = filename.rsplit(".", 1)[0] + ".png"
         img.save(path.join(temp_image_dir, filename), "png")
         new_filenames.append(filename)
