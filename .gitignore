@@ -1,5 +1,7 @@
 .flaskenv
 
+celerybeat-schedule.*
+
 /images
 /resized
 /__pycache__

@@ -1,4 +1,4 @@
-from os import path
+import os
 from uuid import uuid4
 from celery.result import AsyncResult
 from flask import jsonify, request, send_from_directory
@@ -53,9 +53,8 @@ def receive_images():
 
     files = []
     def save_file(img_file):
-        ext = img_file.filename.rsplit(".", 1)[1].lower()
-        filename = f"{uuid4()}.{ext}"
-        img_file.save(path.join(app.config.get("TMP_IMG_DIR"), filename))
+        filename = f"{uuid4()}.png"
+        img_file.save(os.path.join(app.config.get("TMP_IMG_DIR"), filename))
         files.append(filename)
         return f"{filename} saved"
 

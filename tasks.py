@@ -1,18 +1,28 @@
-from os import path, environ
-from uuid import uuid4
+import os
+from datetime import datetime
+from time import time
 from PIL import Image
-from celery import Celery, result
+from uuid import uuid4
+from celery import Celery, result, schedules
 from helpers import create_dir, map_files_to_image
 
 temp_image_dir = create_dir("images")
 results_dir = create_dir("resized")
 
 
-BROKER_URL = environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
-BACKEND_URL = environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
+BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+BACKEND_URL = os.environ.get(
+    "CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
 BASE_SIZE = 640
 
 celery_app = Celery("tasks", broker=BROKER_URL, backend=BACKEND_URL)
+celery_app.conf.beat_schedule = {
+    "remove-stale-files-every-minute": {
+        "task": "tasks.delete_old_images",
+        "schedule": schedules.crontab()
+    }
+}
+celery_app.conf.timezone = 'UTC'
 
 
 def vertical_combine(files, border, border_color):
@@ -37,7 +47,6 @@ def vertical_combine(files, border, border_color):
     return combined_img
 
 
-
 def horizontal_combine(files, border, border_color):
     files = map_files_to_image(files, temp_image_dir)
     total_files = len(files)
@@ -46,7 +55,6 @@ def horizontal_combine(files, border, border_color):
     for img_file in files:
         total_width += img_file.size[0]
 
-    
     width = total_width + ((1 + total_files) * border)
     height = BASE_SIZE + (2 * border)
 
@@ -61,19 +69,17 @@ def horizontal_combine(files, border, border_color):
     return combined_img
 
 
-
 @celery_app.task
 def resize_images(files, orientation):
     new_filenames = []
     for filename in files:
-        img = Image.open(path.join(temp_image_dir, filename))
+        img = Image.open(os.path.join(temp_image_dir, filename))
 
         if orientation == "vertical":
             width = BASE_SIZE
             width_percent = width / float(img.size[0])
             height = int(float(img.size[1]) * float(width_percent))
 
-      
         else:
             height = BASE_SIZE
             height_percent = height / float(img.size[1])
@@ -81,7 +87,7 @@ def resize_images(files, orientation):
 
         img = img.resize((width, height), Image.ANTIALIAS)
         filename = filename.rsplit(".", 1)[0] + ".png"
-        img.save(path.join(temp_image_dir, filename), "png")
+        img.save(os.path.join(temp_image_dir, filename), "png")
         new_filenames.append(filename)
 
     return new_filenames
@@ -95,7 +101,7 @@ def combine_images(files, file_id, border, border_color, orientation):
     else:
         new_image = horizontal_combine(files, border, border_color)
 
-    new_image.save(path.join(results_dir, f"{file_id}.png"), "png")
+    new_image.save(os.path.join(results_dir, f"{file_id}.png"), "png")
 
 
 @celery_app.task
@@ -111,3 +117,17 @@ def process_tasks(files, border, border_color, orientation):
     )
 
     return file_id
+
+
+@celery_app.task
+def delete_old_images():
+    cur_date = datetime.fromtimestamp(time())
+    for filename in os.listdir(results_dir):
+        file_path = os.path.join(results_dir, filename)
+        if os.path.exists(file_path):
+            created_date = datetime.fromtimestamp(os.path.getctime(file_path))
+            date_diff = cur_date - created_date
+
+            # Remove file that are up to 2 weeks old
+            if (date_diff.days <= 14):
+                os.remove(file_path)

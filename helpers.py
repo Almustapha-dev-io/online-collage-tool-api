@@ -1,5 +1,5 @@
+import os
 from flask import jsonify
-from os import getcwd, path, mkdir
 from PIL import Image
 from re import search
 
@@ -21,13 +21,13 @@ def get_response(msg, data=None, status=200):
 
 
 def create_dir(folder_name):
-    base_dir = getcwd()
-    existing_dir = path.join(base_dir, folder_name)
-    if not path.isdir(existing_dir):
-        mkdir(existing_dir)
+    base_dir = os.getcwd()
+    existing_dir = os.path.join(base_dir, folder_name)
+    if not os.path.isdir(existing_dir):
+        os.mkdir(existing_dir)
 
     return existing_dir
 
 
 def map_files_to_image(files, _dir):
-    return [Image.open(path.join(_dir, f)) for f in files]
+    return [Image.open(os.path.join(_dir, f)) for f in files]
