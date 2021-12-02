@@ -9,7 +9,7 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "asupersecretsecret")
     ENV = os.environ.get("FLASK_ENV", "development")
     DEBUG = True if os.environ.get("FLASK_ENV", "development") == "development" else False
-    MAX_CONTENT_LENGTH = 30 * 1024 * 1024
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     MAX_IMAGES = 6
     ALLOWED_TYPES = {"png", "jpg", "jpeg"}
     ALLOWED_ORIENTATIONS = {"vertical", "horizontal"}

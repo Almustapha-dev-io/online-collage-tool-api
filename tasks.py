@@ -3,7 +3,7 @@ from datetime import datetime
 from time import time
 from PIL import Image
 from uuid import uuid4
-from celery import Celery, result, schedules
+from celery import Celery, result, schedules, chain
 from helpers import create_dir, map_files_to_image
 
 temp_image_dir = create_dir("images")
@@ -70,6 +70,14 @@ def horizontal_combine(files, border, border_color):
 
 
 @celery_app.task
+def delete_temp_images(files):
+    for filename in os.listdir(temp_image_dir):
+        file_path = os.path.join(temp_image_dir, filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+
+@celery_app.task
 def resize_images(files, orientation):
     new_filenames = []
     for filename in files:
@@ -101,19 +109,21 @@ def combine_images(files, file_id, border, border_color, orientation):
     else:
         new_image = horizontal_combine(files, border, border_color)
 
+    delete_temp_images.delay(files)
     new_image.save(os.path.join(results_dir, f"{file_id}.png"), "png")
 
 
 @celery_app.task
 def process_tasks(files, border, border_color, orientation):
-    resize_results = resize_images.delay(files=files, orientation=orientation)
     file_id = uuid4()
-    combine_images.delay(
-        files=resize_results.get(),
-        file_id=file_id,
-        border=border,
-        border_color=border_color,
-        orientation=orientation
+    res = resize_images.apply_async(
+        (files, orientation),
+        link=combine_images.s(
+            file_id,
+            border,
+            border_color,
+            orientation
+        )
     )
 
     return file_id
