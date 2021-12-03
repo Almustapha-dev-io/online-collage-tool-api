@@ -11,8 +11,7 @@ results_dir = create_dir("resized")
 
 
 BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
-BACKEND_URL = os.environ.get(
-    "CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
+BACKEND_URL = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
 BASE_SIZE = 640
 
 celery_app = Celery("tasks", broker=BROKER_URL, backend=BACKEND_URL)
@@ -71,6 +70,7 @@ def horizontal_combine(files, border, border_color):
 
 @celery_app.task
 def delete_temp_images(files):
+    # Spinup ThreadPool here before deploy
     for filename in os.listdir(temp_image_dir):
         file_path = os.path.join(temp_image_dir, filename)
         if os.path.exists(file_path):
@@ -80,6 +80,7 @@ def delete_temp_images(files):
 @celery_app.task
 def resize_images(files, orientation):
     new_filenames = []
+    # Spinup Threadpool here before deploy
     for filename in files:
         img = Image.open(os.path.join(temp_image_dir, filename))
 

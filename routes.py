@@ -45,7 +45,7 @@ def receive_images():
     if not orientation or orientation not in app.config.get("ALLOWED_ORIENTATIONS"):
         return get_response("Invalid orientation!", status=400)
 
-    if not border or not is_number(border):
+    if not border or not is_number(border) or float(border) < 0:
         return get_response("Invalid border", status=400)
 
     if not border_color or not hex_color_valid(border_color):
