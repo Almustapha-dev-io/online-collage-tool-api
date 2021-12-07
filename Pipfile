@@ -12,6 +12,7 @@ flask-cors = "*"
 
 [dev-packages]
 autopep8 = "*"
+gevent = "*"
 
 [requires]
 python_version = "3.9"
