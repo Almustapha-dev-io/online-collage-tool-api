@@ -140,5 +140,5 @@ def delete_old_images():
             date_diff = cur_date - created_date
 
             # Remove file that are up to 2 weeks old
-            if (date_diff.days <= 14):
+            if (date_diff.days >= 14):
                 os.remove(file_path)

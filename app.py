@@ -14,4 +14,7 @@ from errors import *
 
 
 if __name__ == "__main__":
-    app.run(port=app.config.get("PORT"))
+    app.run(
+        port=app.config.get("PORT"),
+        host=app.config.get("APP_HOST")
+    )
