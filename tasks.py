@@ -68,21 +68,9 @@ def horizontal_combine(files, border, border_color):
     return combined_img
 
 
-def delete_img(filename):
-    try:
-        print(f"Deleting {filename}...")
-        file_path = os.path.join(temp_image_dir, filename)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            return f"Deleted {filename}!"
-
-    except Exception as e:
-        print(e)    
-        return None
-
-
 def resize_image(filename, orientation):
     try:
+        print(f"Resizing {filename}...")
         img = Image.open(os.path.join(temp_image_dir, filename))
 
         if orientation == "vertical":
@@ -98,6 +86,7 @@ def resize_image(filename, orientation):
         img = img.resize((width, height), Image.ANTIALIAS)
         filename = filename.rsplit(".", 1)[0] + ".png"
         img.save(os.path.join(temp_image_dir, filename), "png")
+
         return filename
 
     except Exception as e:
@@ -105,12 +94,25 @@ def resize_image(filename, orientation):
         return None
 
 
+def delete_img(filename):
+    try:
+        print(f"Deleting {filename}...")
+        file_path = os.path.join(temp_image_dir, filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return f"Deleted {filename}!"
+
+    except Exception as e:
+        print(e)    
+        return None
+
+
 @celery_app.task
 def delete_temp_images(files):
     with ThreadPoolExecutor() as executor:
-        results = executor.submit(delete_img, os.listdir(temp_image_dir))
-        for f in as_completed(results):
-            print(f.result())
+        results = executor.map(delete_img, files)
+        for result in results:
+            print(f"{result} resized!")
 
 
 @celery_app.task
