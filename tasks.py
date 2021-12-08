@@ -4,6 +4,7 @@ from time import time
 from PIL import Image
 from uuid import uuid4
 from celery import Celery, result, schedules, chain
+from concurrent.futures import ThreadPoolExecutor
 from helpers import create_dir, map_files_to_image
 
 temp_image_dir = create_dir("images")
@@ -16,13 +17,12 @@ BASE_SIZE = 640
 
 celery_app = Celery("tasks", broker=BROKER_URL, backend=BACKEND_URL)
 celery_app.conf.beat_schedule = {
-    "remove-stale-files-every-minute": {
+    "remove-stale-files-every-sunday": {
         "task": "tasks.delete_old_images",
-        "schedule": schedules.crontab()
+        "schedule": schedules.crontab(day_of_week=0)
     }
 }
 celery_app.conf.timezone = 'UTC'
-
 
 def vertical_combine(files, border, border_color):
     files = map_files_to_image(files, temp_image_dir)
@@ -68,20 +68,21 @@ def horizontal_combine(files, border, border_color):
     return combined_img
 
 
-@celery_app.task
-def delete_temp_images(files):
-    # Spinup ThreadPool here before deploy
-    for filename in os.listdir(temp_image_dir):
+def delete_img(filename):
+    try:
+        print(f"Deleting {filename}...")
         file_path = os.path.join(temp_image_dir, filename)
         if os.path.exists(file_path):
             os.remove(file_path)
+            return f"Deleted {filename}!"
+
+    except Exception as e:
+        print(e)    
+        return None
 
 
-@celery_app.task
-def resize_images(files, orientation):
-    new_filenames = []
-    # Spinup Threadpool here before deploy
-    for filename in files:
+def resize_image(filename, orientation):
+    try:
         img = Image.open(os.path.join(temp_image_dir, filename))
 
         if orientation == "vertical":
@@ -97,7 +98,32 @@ def resize_images(files, orientation):
         img = img.resize((width, height), Image.ANTIALIAS)
         filename = filename.rsplit(".", 1)[0] + ".png"
         img.save(os.path.join(temp_image_dir, filename), "png")
-        new_filenames.append(filename)
+        return filename
+
+    except Exception as e:
+        print(e)
+        return None
+
+
+@celery_app.task
+def delete_temp_images(files):
+    with ThreadPoolExecutor() as executor:
+        results = executor.submit(delete_img, os.listdir(temp_image_dir))
+        for f in as_completed(results):
+            print(f.result())
+
+
+@celery_app.task
+def resize_images(files, orientation):
+    files = [(file_name, orientation) for file_name in files]
+    new_filenames = []
+    
+    with ThreadPoolExecutor() as executor:
+        results = executor.map(resize_image, *zip(*files))
+        for result in results:
+            print(result)
+            if result:
+                new_filenames.append(result)
 
     return new_filenames
 
@@ -139,6 +165,6 @@ def delete_old_images():
             created_date = datetime.fromtimestamp(os.path.getctime(file_path))
             date_diff = cur_date - created_date
 
-            # Remove file that are up to 2 weeks old
+            # Remove files that are up to 2 weeks old
             if (date_diff.days >= 14):
                 os.remove(file_path)

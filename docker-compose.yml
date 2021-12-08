@@ -10,8 +10,8 @@ services:
       FLASK_ENV: production
       APP_HOST: "0.0.0.0"
       PORT: 5000
-      CELERY_BROKER_URL: redis://redis/6379/0
-      CELERY_RESULT_BACKEND: redis://redis/6379/1
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
     volumes:
       - images:/app/images
       - resized:/app/resized
@@ -19,14 +19,34 @@ services:
       - redis
   
   worker:
-    image: COLLAGE-TOOL-API_api
+    image: collage-tool-api_api
     command: celery -A tasks worker -l info
+    environment:
+      SECRET_KEY: asupersecret
+      FLASK_ENV: production
+      APP_HOST: "0.0.0.0"
+      PORT: 5000
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    volumes:
+      - images:/app/images
+      - resized:/app/resized
     depends_on:
       - api
 
   worker_beat:
-    image: COLLAGE-TOOL-API_api
+    image: collage-tool-api_api
     command: celery -A tasks beat -l info
+    environment:
+      SECRET_KEY: asupersecret
+      FLASK_ENV: production
+      APP_HOST: "0.0.0.0"
+      PORT: 5000
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    volumes:
+      - images:/app/images
+      - resized:/app/resized
     depends_on:
       - api
       - worker
